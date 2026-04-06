@@ -2,21 +2,34 @@ import { useState } from "react";
 import {
   Calendar,
   Clock,
+  FileText,
   MapPin,
   Plus,
   Stethoscope,
   Video,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import {
   PatientPageHero,
   PatientPortalPage,
   StatusPill,
-  portalDangerButtonClass,
   portalDialogClass,
   portalInputClass,
   portalMutedPanelClass,
@@ -26,6 +39,24 @@ import {
   portalSelectItemClass,
   portalSelectTriggerClass,
 } from "../../components/patient/PortalTheme";
+
+type Appointment = {
+  id: number;
+  doctor: string;
+  specialty: string;
+  date: string;
+  time: string;
+  type: "video" | "in-person";
+  location?: string;
+  status: string;
+  notes?: string;
+};
+
+const doctorOptions = [
+  { value: "sarah", label: "Dr. Sarah Johnson - Cardiologist", doctor: "Dr. Sarah Johnson", specialty: "Cardiologist" },
+  { value: "michael", label: "Dr. Michael Chen - Endocrinologist", doctor: "Dr. Michael Chen", specialty: "Endocrinologist" },
+  { value: "emily", label: "Dr. Emily Williams - General Physician", doctor: "Dr. Emily Williams", specialty: "General Physician" },
+];
 
 function formatDisplayDate(date: string) {
   try {
@@ -40,10 +71,34 @@ function formatDisplayDate(date: string) {
   }
 }
 
-export default function Appointments() {
-  const [open, setOpen] = useState(false);
+function formatTimeLabel(value: string) {
+  if (!value) return "";
 
-  const upcomingAppointments = [
+  try {
+    return new Date(`1970-01-01T${value}:00`).toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return value;
+  }
+}
+
+export default function Appointments() {
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [selectedType, setSelectedType] = useState<Appointment["type"] | "">("");
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleTime, setRescheduleTime] = useState("");
+  const [isSavingSchedule, setIsSavingSchedule] = useState(false);
+  const [isSavingReschedule, setIsSavingReschedule] = useState(false);
+
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([
     {
       id: 1,
       doctor: "Dr. Sarah Johnson",
@@ -63,9 +118,9 @@ export default function Appointments() {
       location: "Zebra Medical Center, Floor 3",
       status: "confirmed",
     },
-  ];
+  ]);
 
-  const pastAppointments = [
+  const pastAppointments: Appointment[] = [
     {
       id: 3,
       doctor: "Dr. Emily Williams",
@@ -74,6 +129,7 @@ export default function Appointments() {
       time: "11:00 AM",
       type: "in-person",
       status: "completed",
+      notes: "Discussed energy levels, sleep quality, and a three-month follow-up for routine lab monitoring.",
     },
     {
       id: 4,
@@ -83,95 +139,282 @@ export default function Appointments() {
       time: "9:30 AM",
       type: "video",
       status: "completed",
+      notes: "Reviewed lipid markers, reinforced nutrition goals, and planned repeat screening for cardiovascular risk tracking.",
     },
   ];
 
+  const resetScheduleForm = () => {
+    setSelectedDoctor("");
+    setSelectedDate("");
+    setSelectedTime("");
+    setSelectedType("");
+  };
+
+  const handleScheduleAppointment = () => {
+    if (!selectedDoctor || !selectedDate || !selectedTime || !selectedType) return;
+
+    const doctor = doctorOptions.find((option) => option.value === selectedDoctor);
+    if (!doctor) return;
+
+    setIsSavingSchedule(true);
+    window.setTimeout(() => {
+      setUpcomingAppointments((current) => [
+        {
+          id: Date.now(),
+          doctor: doctor.doctor,
+          specialty: doctor.specialty,
+          date: selectedDate,
+          time: formatTimeLabel(selectedTime),
+          type: selectedType,
+          location: selectedType === "in-person" ? "Zebra Medical Center, Floor 3" : undefined,
+          status: "confirmed",
+        },
+        ...current,
+      ]);
+      setIsSavingSchedule(false);
+      setScheduleOpen(false);
+      resetScheduleForm();
+    }, 450);
+  };
+
+  const handleReschedule = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setRescheduleDate(appointment.date);
+    setRescheduleTime("");
+    setRescheduleOpen(true);
+  };
+
+  const handleConfirmReschedule = () => {
+    if (!selectedAppointment || !rescheduleDate || !rescheduleTime) return;
+
+    setIsSavingReschedule(true);
+    window.setTimeout(() => {
+      setUpcomingAppointments((current) =>
+        current.map((appointment) =>
+          appointment.id === selectedAppointment.id
+            ? {
+                ...appointment,
+                date: rescheduleDate,
+                time: formatTimeLabel(rescheduleTime),
+              }
+            : appointment,
+        ),
+      );
+      setIsSavingReschedule(false);
+      setRescheduleOpen(false);
+      setSelectedAppointment(null);
+      setRescheduleDate("");
+      setRescheduleTime("");
+    }, 450);
+  };
+
+  const handleViewNotes = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setNotesOpen(true);
+  };
+
+  const handleScheduleOpenChange = (open: boolean) => {
+    setScheduleOpen(open);
+    if (!open) {
+      resetScheduleForm();
+      setIsSavingSchedule(false);
+    }
+  };
+
+  const handleRescheduleOpenChange = (open: boolean) => {
+    setRescheduleOpen(open);
+    if (!open) {
+      setSelectedAppointment(null);
+      setRescheduleDate("");
+      setRescheduleTime("");
+      setIsSavingReschedule(false);
+    }
+  };
+
+  const isScheduleReady = Boolean(selectedDoctor && selectedDate && selectedTime && selectedType);
+  const isRescheduleReady = Boolean(selectedAppointment && rescheduleDate && rescheduleTime);
+
   return (
     <PatientPortalPage>
-      <PatientPageHero
-        eyebrow="Care Coordination"
-        title="Appointments"
-        description="Manage upcoming visits, keep your follow-ups visible, and keep every appointment in the same premium workspace as the rest of your health portal."
-        icon={Calendar}
-        meta={[
-          { label: "Upcoming", value: upcomingAppointments.length },
-          { label: "Completed", value: pastAppointments.length },
-        ]}
-        actions={
-          <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={scheduleOpen} onOpenChange={handleScheduleOpenChange}>
+        <PatientPageHero
+          eyebrow="Care Coordination"
+          title="Appointments"
+          description="Manage upcoming visits, keep your follow-ups visible, and keep every appointment in the same premium workspace as the rest of your health portal."
+          icon={Calendar}
+          meta={[
+            { label: "Upcoming", value: upcomingAppointments.length },
+            { label: "Completed", value: pastAppointments.length },
+          ]}
+          actions={
             <DialogTrigger asChild>
               <Button className={portalPrimaryButtonClass}>
                 <Plus className="mr-2 h-4 w-4" />
                 Schedule Appointment
               </Button>
             </DialogTrigger>
-            <DialogContent className={portalDialogClass}>
-              <DialogHeader>
-                <DialogTitle className="text-white">Schedule New Appointment</DialogTitle>
-                <DialogDescription className="text-[#A1A1AA]">
-                  Choose a doctor and preferred time for your appointment.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div className="space-y-2">
-                  <Label htmlFor="doctor" className="text-sm text-white">
-                    Select Doctor
-                  </Label>
-                  <Select>
-                    <SelectTrigger id="doctor" className={portalSelectTriggerClass}>
-                      <SelectValue placeholder="Choose a doctor" />
-                    </SelectTrigger>
-                    <SelectContent className={portalSelectContentClass}>
-                      <SelectItem value="sarah" className={portalSelectItemClass}>
-                        Dr. Sarah Johnson - Cardiologist
-                      </SelectItem>
-                      <SelectItem value="michael" className={portalSelectItemClass}>
-                        Dr. Michael Chen - Endocrinologist
-                      </SelectItem>
-                      <SelectItem value="emily" className={portalSelectItemClass}>
-                        Dr. Emily Williams - General Physician
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="date" className="text-sm text-white">
-                    Date
-                  </Label>
-                  <Input id="date" type="date" className={portalInputClass} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="time" className="text-sm text-white">
-                    Time
-                  </Label>
-                  <Input id="time" type="time" className={portalInputClass} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type" className="text-sm text-white">
-                    Appointment Type
-                  </Label>
-                  <Select>
-                    <SelectTrigger id="type" className={portalSelectTriggerClass}>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent className={portalSelectContentClass}>
-                      <SelectItem value="video" className={portalSelectItemClass}>
-                        Video Consultation
-                      </SelectItem>
-                      <SelectItem value="in-person" className={portalSelectItemClass}>
-                        In-Person Visit
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button className={`w-full ${portalPrimaryButtonClass}`} onClick={() => setOpen(false)}>
-                  Confirm Appointment
-                </Button>
+          }
+        />
+
+        <DialogContent className={portalDialogClass}>
+          <DialogHeader>
+            <DialogTitle className="text-white">Schedule New Appointment</DialogTitle>
+            <DialogDescription className="text-[#A1A1AA]">
+              Choose a doctor and preferred time for your appointment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="doctor" className="text-sm text-white">
+                Select Doctor
+              </Label>
+              <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                <SelectTrigger id="doctor" className={portalSelectTriggerClass}>
+                  <SelectValue placeholder="Choose a doctor" />
+                </SelectTrigger>
+                <SelectContent className={portalSelectContentClass}>
+                  {doctorOptions.map((doctor) => (
+                    <SelectItem key={doctor.value} value={doctor.value} className={portalSelectItemClass}>
+                      {doctor.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date" className="text-sm text-white">
+                Date
+              </Label>
+              <Input
+                id="date"
+                type="date"
+                className={portalInputClass}
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="time" className="text-sm text-white">
+                Time
+              </Label>
+              <Input
+                id="time"
+                type="time"
+                className={portalInputClass}
+                value={selectedTime}
+                onChange={(event) => setSelectedTime(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="type" className="text-sm text-white">
+                Appointment Type
+              </Label>
+              <Select value={selectedType} onValueChange={(value) => setSelectedType(value as Appointment["type"])}>
+                <SelectTrigger id="type" className={portalSelectTriggerClass}>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent className={portalSelectContentClass}>
+                  <SelectItem value="video" className={portalSelectItemClass}>
+                    Video Consultation
+                  </SelectItem>
+                  <SelectItem value="in-person" className={portalSelectItemClass}>
+                    In-Person Visit
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              className={`w-full active:scale-[0.98] ${portalPrimaryButtonClass}`}
+              onClick={handleScheduleAppointment}
+              disabled={!isScheduleReady || isSavingSchedule}
+            >
+              {isSavingSchedule ? "Confirming..." : "Confirm Appointment"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={rescheduleOpen} onOpenChange={handleRescheduleOpenChange}>
+        <DialogContent className={portalDialogClass}>
+          <DialogHeader>
+            <DialogTitle className="text-white">Reschedule Appointment</DialogTitle>
+            <DialogDescription className="text-[#A1A1AA]">
+              Choose a new date and time for {selectedAppointment?.doctor ?? "this appointment"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="reschedule-date" className="text-sm text-white">
+                New Date
+              </Label>
+              <Input
+                id="reschedule-date"
+                type="date"
+                className={portalInputClass}
+                value={rescheduleDate}
+                onChange={(event) => setRescheduleDate(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reschedule-time" className="text-sm text-white">
+                New Time
+              </Label>
+              <Input
+                id="reschedule-time"
+                type="time"
+                className={portalInputClass}
+                value={rescheduleTime}
+                onChange={(event) => setRescheduleTime(event.target.value)}
+              />
+            </div>
+            <Button
+              className={`w-full active:scale-[0.98] ${portalPrimaryButtonClass}`}
+              onClick={handleConfirmReschedule}
+              disabled={!isRescheduleReady || isSavingReschedule}
+            >
+              {isSavingReschedule ? "Updating..." : "Confirm New Time"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={notesOpen} onOpenChange={setNotesOpen}>
+        <DialogContent className={portalDialogClass}>
+          <DialogHeader>
+            <DialogTitle className="text-white">Appointment Notes</DialogTitle>
+            <DialogDescription className="text-[#A1A1AA]">
+              Visit summary and follow-up details from your completed appointment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-[1.1rem] border border-white/8 bg-white/[0.04] p-4">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Doctor</p>
+              <p className="mt-2 text-sm font-medium text-white">{selectedAppointment?.doctor ?? "—"}</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[1.1rem] border border-white/8 bg-white/[0.04] p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Appointment Date</p>
+                <p className="mt-2 text-sm font-medium text-white">
+                  {selectedAppointment ? formatDisplayDate(selectedAppointment.date) : "—"}
+                </p>
               </div>
-            </DialogContent>
-          </Dialog>
-        }
-      />
+              <div className="rounded-[1.1rem] border border-white/8 bg-white/[0.04] p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Time</p>
+                <p className="mt-2 text-sm font-medium text-white">{selectedAppointment?.time ?? "—"}</p>
+              </div>
+            </div>
+            <div className="rounded-[1.1rem] border border-white/8 bg-[#111111]/80 p-4">
+              <div className="mb-3 flex items-center gap-2 text-white">
+                <FileText className="h-4 w-4 text-[#ff9c61]" />
+                <p className="text-sm font-medium">Notes</p>
+              </div>
+              <p className="text-sm leading-7 text-[#D4D4D8]">
+                {selectedAppointment?.notes ?? "Clinical notes will appear here after each completed visit."}
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
         <section className="space-y-4">
@@ -227,14 +470,12 @@ export default function Appointments() {
                   </div>
                 </div>
                 <div className="mt-5 flex flex-wrap gap-3">
-                  {appointment.type === "video" ? (
-                    <Button className={portalPrimaryButtonClass}>Join Video Call</Button>
-                  ) : null}
-                  <Button variant="outline" className={portalSecondaryButtonClass}>
+                  <Button
+                    variant="outline"
+                    className={`active:scale-[0.98] ${portalSecondaryButtonClass}`}
+                    onClick={() => handleReschedule(appointment)}
+                  >
                     Reschedule
-                  </Button>
-                  <Button variant="outline" className={portalDangerButtonClass}>
-                    Cancel
                   </Button>
                 </div>
               </article>
@@ -288,7 +529,11 @@ export default function Appointments() {
                     )}
                   </div>
                 </div>
-                <Button variant="outline" className={`mt-5 ${portalSecondaryButtonClass}`}>
+                <Button
+                  variant="outline"
+                  className={`mt-5 active:scale-[0.98] ${portalSecondaryButtonClass}`}
+                  onClick={() => handleViewNotes(appointment)}
+                >
                   View Notes
                 </Button>
               </article>
