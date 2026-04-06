@@ -37,6 +37,9 @@ Required environment variables for the deployed frontend:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+
+Optional environment variable:
+
 - `VITE_SITE_URL`
 
-`VITE_SITE_URL` must match the final public origin of the deployed app so Supabase email confirmation and magic-link redirects resolve correctly.
+If `VITE_SITE_URL` is omitted, the app uses the browser origin for auth redirects.

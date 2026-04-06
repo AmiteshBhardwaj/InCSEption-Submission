@@ -59,16 +59,16 @@ See [demo.md](./demo.md) for demo flow, setup, and what judges should inspect. A
 4. Add these environment variables in Vercel:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_SITE_URL=https://<your-deployed-domain>`
-5. In Supabase, set the same deployed URL in:
+5. Optionally add `VITE_SITE_URL=https://<your-deployed-domain>` if you want to force auth redirects to a specific origin. Otherwise the app uses the current browser origin.
+6. In Supabase, set the deployed URL in:
    - `Authentication -> URL Configuration -> Site URL`
    - `Authentication -> URL Configuration -> Redirect URLs`
-6. Apply the SQL migrations in [`supabase/migrations/`](./supabase/migrations/) to the target Supabase project before testing sign-up, login, prescriptions, or lab data flows.
-7. Trigger a production deployment.
+7. Apply the SQL migrations in [`supabase/migrations/`](./supabase/migrations/) to the target Supabase project before testing sign-up, login, prescriptions, or lab data flows.
+8. Trigger a production deployment.
 
 Do not use commands such as `cd zebra-synapse && npm ci` in Vercel. Once the root directory is `zebra-synapse`, Vercel already runs inside that folder.
 
-If `VITE_SITE_URL` or the Supabase redirect URLs do not match the deployed domain exactly, email confirmation and login redirects will break.
+If you set `VITE_SITE_URL`, it must match an allowed Supabase redirect origin exactly.
 
 ## Validation
 
