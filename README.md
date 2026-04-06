@@ -25,11 +25,13 @@ Open [`zebra-synapse/README.md`](./zebra-synapse/README.md) for the full project
 
 ## Deployment
 
-This repository is deployable from the repository root on Vercel.
+Deploy this project on Vercel with the project root set to [`zebra-synapse`](./zebra-synapse).
 
-- Root deploy config: [`vercel.json`](./vercel.json)
-- Application source: [`zebra-synapse`](./zebra-synapse)
-- Production build output: `zebra-synapse/dist`
+- Root Directory: `zebra-synapse`
+- Framework Preset: `Vite`
+- Install Command: `npm ci` or leave it blank
+- Build Command: `npm run build` or leave it blank
+- Output Directory: `dist`
 
 Required environment variables for the deployed frontend:
 

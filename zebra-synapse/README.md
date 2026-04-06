@@ -49,17 +49,24 @@ See [demo.md](./demo.md) for demo flow, setup, and what judges should inspect. A
 
 ## Deploy on Vercel
 
-1. Import the repository into Vercel from the repository root.
-2. Keep the root [`vercel.json`](../vercel.json) in place so Vercel installs and builds from `zebra-synapse/`.
-3. Add these environment variables in Vercel:
+1. Import the repository into Vercel.
+2. Set `Root Directory` to `zebra-synapse`.
+3. Use these Vercel build settings:
+   - `Framework Preset`: `Vite`
+   - `Install Command`: `npm ci` or leave it blank
+   - `Build Command`: `npm run build` or leave it blank
+   - `Output Directory`: `dist`
+4. Add these environment variables in Vercel:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
    - `VITE_SITE_URL=https://<your-deployed-domain>`
-4. In Supabase, set the same deployed URL in:
+5. In Supabase, set the same deployed URL in:
    - `Authentication -> URL Configuration -> Site URL`
    - `Authentication -> URL Configuration -> Redirect URLs`
-5. Apply the SQL migrations in [`supabase/migrations/`](./supabase/migrations/) to the target Supabase project before testing sign-up, login, prescriptions, or lab data flows.
-6. Trigger a production deployment.
+6. Apply the SQL migrations in [`supabase/migrations/`](./supabase/migrations/) to the target Supabase project before testing sign-up, login, prescriptions, or lab data flows.
+7. Trigger a production deployment.
+
+Do not use commands such as `cd zebra-synapse && npm ci` in Vercel. Once the root directory is `zebra-synapse`, Vercel already runs inside that folder.
 
 If `VITE_SITE_URL` or the Supabase redirect URLs do not match the deployed domain exactly, email confirmation and login redirects will break.
 
