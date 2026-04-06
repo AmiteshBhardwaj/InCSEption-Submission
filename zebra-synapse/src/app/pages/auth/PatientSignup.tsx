@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { getAuthRequestErrorMessage } from "../../../lib/authErrors";
 import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
@@ -34,32 +35,36 @@ export default function PatientSignup() {
     const email = formData.email.trim();
     const emailRedirectTo = getAuthEmailRedirectUrl("/login/patient");
     setSubmitting(true);
-    const { data, error } = await sb.auth.signUp({
-      email,
-      password: formData.password,
-      options: {
-        emailRedirectTo,
-        data: {
-          role: "patient",
-          full_name: formData.name,
+    try {
+      const { data, error } = await sb.auth.signUp({
+        email,
+        password: formData.password,
+        options: {
+          emailRedirectTo,
+          data: {
+            role: "patient",
+            full_name: formData.name,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      toast.error(error.message);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      if (data.session) {
+        toast.success("Account created.");
+        navigate("/patient");
+      } else {
+        toast.success("Check your email to confirm your account, then sign in.");
+        navigate("/login/patient?confirm=1");
+      }
+    } catch (error) {
+      toast.error(getAuthRequestErrorMessage(error));
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    if (data.session) {
-      toast.success("Account created.");
-      navigate("/patient");
-    } else {
-      toast.success("Check your email to confirm your account, then sign in.");
-      navigate("/login/patient?confirm=1");
-    }
-    setSubmitting(false);
   };
 
   return (

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { getSignInErrorMessage } from "../../../lib/authErrors";
+import { getAuthRequestErrorMessage, getSignInErrorMessage } from "../../../lib/authErrors";
 import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
@@ -29,49 +29,49 @@ export default function DoctorLogin() {
 
     const emailTrimmed = email.trim();
     setSubmitting(true);
-    const { data, error } = await sb.auth.signInWithPassword({
-      email: emailTrimmed,
-      password,
-    });
-    if (error) {
-      toast.error(getSignInErrorMessage(error));
-      setSubmitting(false);
-      return;
-    }
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({
+        email: emailTrimmed,
+        password,
+      });
+      if (error) {
+        toast.error(getSignInErrorMessage(error));
+        return;
+      }
 
-    const user = data.user;
-    if (!user) {
-      toast.error("Could not load user.");
-      setSubmitting(false);
-      return;
-    }
+      const user = data.user;
+      if (!user) {
+        toast.error("Could not load user.");
+        return;
+      }
 
-    const { data: row, error: profErr } = await sb
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
+      const { data: row, error: profErr } = await sb
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
 
-    if (profErr) {
-      toast.error(profErr.message);
-      setSubmitting(false);
-      return;
-    }
-    if (!row) {
-      toast.error("No profile found. Run the SQL migration in Supabase.");
-      await sb.auth.signOut();
-      setSubmitting(false);
-      return;
-    }
-    if (row.role === "patient") {
-      await sb.auth.signOut();
-      toast.error("This account is registered as a patient. Use the patient login.");
-      setSubmitting(false);
-      return;
-    }
+      if (profErr) {
+        toast.error(profErr.message);
+        return;
+      }
+      if (!row) {
+        toast.error("No profile found. Run the SQL migration in Supabase.");
+        await sb.auth.signOut();
+        return;
+      }
+      if (row.role === "patient") {
+        await sb.auth.signOut();
+        toast.error("This account is registered as a patient. Use the patient login.");
+        return;
+      }
 
-    setSubmitting(false);
-    navigate("/doctor");
+      navigate("/doctor");
+    } catch (error) {
+      toast.error(getAuthRequestErrorMessage(error));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleResendConfirmation = async () => {
@@ -88,17 +88,22 @@ export default function DoctorLogin() {
     if (!sb) return;
     const emailRedirectTo = getAuthEmailRedirectUrl("/login/doctor");
     setResending(true);
-    const { error } = await sb.auth.resend({
-      type: "signup",
-      email: trimmed,
-      options: { emailRedirectTo },
-    });
-    setResending(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await sb.auth.resend({
+        type: "signup",
+        email: trimmed,
+        options: { emailRedirectTo },
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Confirmation email sent. Check your inbox and spam.");
+    } catch (error) {
+      toast.error(getAuthRequestErrorMessage(error));
+    } finally {
+      setResending(false);
     }
-    toast.success("Confirmation email sent. Check your inbox and spam.");
   };
 
   return (
