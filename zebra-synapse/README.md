@@ -26,14 +26,14 @@ See [architecture.md](./architecture.md) for the full system breakdown.
 
 ## Demo
 Demo video - https://youtu.be/xa0-ucu9rgE?si=y67QKcMFRMQ1W2ej
-demo link - https://zebrasynapse.vercel.app/
+
 
 See [demo.md](./demo.md) for demo flow, setup, and what judges should inspect. Add your Loom or YouTube demo link at the top of that file before final submission.
 
 ## Pre-Submission Checklist
 
 - [x] Code is organized inside this submission package
-- [x] Dependencies are documented in [`requirements.txt`](./requirements.txt)
+- [x] Dependencies are documented in [`tooling-requirements.md`](./tooling-requirements.md)
 - [x] Environment variables are documented in [`.env.example`](./.env.example)
 - [x] Screenshots folder is included in [`screenshots/`](./screenshots)
 - [x] Local run instructions are included below
@@ -47,6 +47,29 @@ See [demo.md](./demo.md) for demo flow, setup, and what judges should inspect. A
 3. Copy `.env.example` to `.env` or run `npm run env:local` after starting local Supabase
 4. `npm run dev`
 
+## Deploy on Vercel
+
+1. Import the repository into Vercel.
+2. Set `Root Directory` to `zebra-synapse`.
+3. Use these Vercel build settings:
+   - `Framework Preset`: `Vite`
+   - `Install Command`: `npm ci` or leave it blank
+   - `Build Command`: `npm run build` or leave it blank
+   - `Output Directory`: `dist`
+4. Add these environment variables in Vercel:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+5. Optionally add `VITE_SITE_URL=https://<your-deployed-domain>` if you want to force auth redirects to a specific origin. Otherwise the app uses the current browser origin.
+6. In Supabase, set the deployed URL in:
+   - `Authentication -> URL Configuration -> Site URL`
+   - `Authentication -> URL Configuration -> Redirect URLs`
+7. Apply the SQL migrations in [`supabase/migrations/`](./supabase/migrations/) to the target Supabase project before testing sign-up, login, prescriptions, or lab data flows.
+8. Trigger a production deployment.
+
+Do not use commands such as `cd zebra-synapse && npm ci` in Vercel. Once the root directory is `zebra-synapse`, Vercel already runs inside that folder.
+
+If you set `VITE_SITE_URL`, it must match an allowed Supabase redirect origin exactly.
+
 ## Validation
 
 - `npm run check`
@@ -58,6 +81,6 @@ See [demo.md](./demo.md) for demo flow, setup, and what judges should inspect. A
 - `src/`: application source
 - `supabase/`: schema and migration history
 - `package.json`: project scripts and dependencies
-- `requirements.txt`: runtime and tooling requirements summary
+- `tooling-requirements.md`: runtime and tooling requirements summary
 - `architecture.md`: system design summary
 - `demo.md`: demo guide for judges

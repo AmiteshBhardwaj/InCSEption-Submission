@@ -17,8 +17,29 @@ That folder includes:
 
 - `.github/`: CI workflow configuration
 - `zebra-synapse/`: final submission package
-- `requirements.txt`: environment prerequisites summary
+- `tooling-requirements.md`: environment prerequisites summary
 
 ## Start Here
 
 Open [`zebra-synapse/README.md`](./zebra-synapse/README.md) for the full project overview, setup steps, and submission details.
+
+## Deployment
+
+Deploy this project on Vercel with the project root set to [`zebra-synapse`](./zebra-synapse).
+
+- Root Directory: `zebra-synapse`
+- Framework Preset: `Vite`
+- Install Command: `npm ci` or leave it blank
+- Build Command: `npm run build` or leave it blank
+- Output Directory: `dist`
+
+Required environment variables for the deployed frontend:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Optional environment variable:
+
+- `VITE_SITE_URL`
+
+If `VITE_SITE_URL` is omitted, the app uses the browser origin for auth redirects.
