@@ -26,7 +26,7 @@ See [architecture.md](./architecture.md) for the full system breakdown.
 
 ## Demo
 Demo video - https://youtu.be/xa0-ucu9rgE?si=y67QKcMFRMQ1W2ej
-demo link - https://zebrasynapse.vercel.app/
+
 
 See [demo.md](./demo.md) for demo flow, setup, and what judges should inspect. Add your Loom or YouTube demo link at the top of that file before final submission.
 
