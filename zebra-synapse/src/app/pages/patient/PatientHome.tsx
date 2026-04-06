@@ -29,6 +29,8 @@ import {
   getMetricValueLabel,
   getOverallStatus,
 } from "../../../lib/labInsights";
+import { BiomarkerInsightsBoard } from "../../components/patient/BiomarkerInsights";
+import { BodyInsightPanel } from "../../components/patient/BodyInsightPanel";
 
 export default function PatientHome() {
   const { hasLabReports, loading, uploads, uploadLabReport } = usePatientLabReports();
@@ -36,6 +38,8 @@ export default function PatientHome() {
     usePatientLabPanels();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [focusedMetricKeys, setFocusedMetricKeys] = useState<string[]>([]);
 
   const latestPanel = useMemo(() => getLatestLabPanel(panels), [panels]);
   const overall = latestPanel ? getOverallStatus(latestPanel) : null;
@@ -52,6 +56,21 @@ export default function PatientHome() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+
+    const input = document.getElementById("lab-upload") as HTMLInputElement | null;
+    if (input) {
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      input.files = transfer.files;
     }
   };
 
@@ -88,16 +107,9 @@ export default function PatientHome() {
             <div className="absolute -left-20 top-0 h-56 w-56 rounded-full bg-[radial-gradient(circle,_rgba(255,140,72,0.22)_0%,_rgba(255,140,72,0)_72%)] blur-2xl" />
             <div className="absolute right-8 top-6 h-80 w-36 rotate-[24deg] rounded-full border border-[#ff9e67]/40 opacity-70" />
             <div className="absolute right-20 top-2 h-80 w-36 rotate-[24deg] rounded-full border border-[#8d74ff]/30 opacity-45" />
-            <div className="absolute right-14 top-0 h-80 w-36 rotate-[24deg]">
-              <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-[#ff8c48]/80 to-transparent" />
-              <div className="absolute top-8 h-px w-full bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-              <div className="absolute top-28 h-px w-full bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-              <div className="absolute top-48 h-px w-full bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-              <div className="absolute top-68 h-px w-full bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-            </div>
           </div>
 
-          <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div className="relative z-10 grid gap-6 xl:grid-cols-[1fr_1.1fr]">
             <div className="max-w-2xl">
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-[#f57c33]/30 bg-[#f57c33]/12 px-3 py-1 text-xs uppercase tracking-[0.24em] text-[#ffb07a]">
@@ -135,127 +147,69 @@ export default function PatientHome() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3 xl:w-[30rem] xl:grid-cols-1">
-              <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <p className="text-sm font-medium text-white">Summary</p>
-                  <Activity className="h-4 w-4 text-[#ff9d66]" />
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <div className="space-y-4">
+              <BodyInsightPanel
+                metrics={allMetrics}
+                focusedMetricKeys={focusedMetricKeys}
+                onFocusMetricKeys={setFocusedMetricKeys}
+              />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <p className="text-sm font-medium text-white">Summary</p>
+                    <Activity className="h-4 w-4 text-[#ff9d66]" />
+                  </div>
                   <div className="rounded-[1.3rem] bg-gradient-to-br from-[#fb7b34] to-[#f25e2b] p-4 text-white">
                     <p className="text-xs uppercase tracking-[0.2em] text-white/75">Tracked biomarkers</p>
                     <p className="mt-3 text-3xl font-semibold">
                       {latestPanel ? Object.keys(latestPanel.biomarkers ?? {}).length : 0}
                     </p>
                   </div>
-                  <div className="rounded-[1.3rem] border border-white/10 bg-[#1b1b21] p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-white/42">Review focus</p>
-                    <p className="mt-3 text-lg font-medium text-white">
-                      {overall?.label ?? "Pending upload"}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-white/55">
-                      {overall?.summary ?? "Add your first report to activate visual analysis."}
-                    </p>
+                </div>
+
+                <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <p className="text-sm font-medium text-white">Portal signals</p>
+                    <Sparkles className="h-4 w-4 text-[#8f7cff]" />
                   </div>
-                </div>
-              </div>
-
-              <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-5 md:col-span-2 xl:col-span-1">
-                <div className="mb-4 flex items-center justify-between">
-                  <p className="text-sm font-medium text-white">Portal signals</p>
-                  <Sparkles className="h-4 w-4 text-[#8f7cff]" />
-                </div>
-                <div className="space-y-3">
-                  {[
-                    {
-                      icon: ShieldCheck,
-                      label: "Secure storage",
-                      value: hasLabReports ? "Reports saved" : "Waiting for first upload",
-                    },
-                    {
-                      icon: FlaskConical,
-                      label: "Extraction",
-                      value: hasPanels ? "Biomarkers processed" : "No extracted panel yet",
-                    },
-                    {
-                      icon: ArrowUpRight,
-                      label: "Recent files",
-                      value: `${uploads.length} file${uploads.length === 1 ? "" : "s"} in portal`,
-                    },
-                  ].map((item) => {
-                    const Icon = item.icon;
-
-                    return (
-                      <div key={item.label} className="flex items-center justify-between rounded-2xl border border-white/8 bg-black/20 px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.06]">
-                            <Icon className="h-4 w-4 text-[#ff9d66]" />
-                          </span>
-                          <span className="text-sm text-white/72">{item.label}</span>
+                  <div className="space-y-2.5">
+                    {[
+                      {
+                        icon: ShieldCheck,
+                        label: "Secure storage",
+                        value: hasLabReports ? "Reports saved" : "Waiting for first upload",
+                      },
+                      {
+                        icon: FlaskConical,
+                        label: "Extraction",
+                        value: hasPanels ? "Biomarkers processed" : "No extracted panel yet",
+                      },
+                      {
+                        icon: ArrowUpRight,
+                        label: "Recent files",
+                        value: `${uploads.length} file${uploads.length === 1 ? "" : "s"} in portal`,
+                      },
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={item.label} className="flex items-center justify-between rounded-xl border border-white/8 bg-black/20 px-3 py-2.5">
+                          <div className="flex items-center gap-2.5">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06]">
+                              <Icon className="h-3.5 w-3.5 text-[#ff9d66]" />
+                            </span>
+                            <span className="text-xs text-white/72">{item.label}</span>
+                          </div>
+                          <span className="text-xs font-medium text-white">{item.value}</span>
                         </div>
-                        <span className="text-sm font-medium text-white">{item.value}</span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
-
-        {latestPanel ? (
-          <div className="space-y-6">
-            <OverviewStatCards
-              stats={[
-                {
-                  label: "Tracked Biomarkers",
-                  value: Object.keys(latestPanel.biomarkers ?? {}).length,
-                  detail: "Live markers extracted from your latest uploaded report.",
-                  tone: "orange",
-                },
-                {
-                  label: "Outside Range",
-                  value: allMetrics.filter((metric) => metric.status === "high" || metric.status === "low").length,
-                  detail: "Markers that need the fastest follow-up.",
-                  tone: "rose",
-                },
-                {
-                  label: "Borderline",
-                  value: allMetrics.filter((metric) => metric.status === "borderline").length,
-                  detail: "Markers worth tracking before they drift further.",
-                  tone: "violet",
-                },
-                {
-                  label: "Uploaded Reports",
-                  value: uploads.length,
-                  detail: "Files currently powering your patient portal.",
-                  tone: "slate",
-                },
-              ]}
-            />
-
-            <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-              <MetricPriorityBars
-                metrics={allMetrics}
-                title="Highest-priority markers"
-                description="The dashboard ranks urgent markers first so follow-up is easier to scan."
-                limit={10}
-              />
-              <MetricStatusDonut
-                metrics={allMetrics}
-                title="Biomarker status mix"
-                description="A quick read on how the latest panel is distributed across normal, borderline, and outside-range markers."
-              />
-            </div>
-
-            <MetricSparklineGrid
-              panels={panels}
-              metricKeys={topMetrics.slice(0, 6).map((metric) => metric.key)}
-              title="Recent marker movement"
-              description="Small trend cards make repeat panels easier to compare at a glance."
-            />
-          </div>
-        ) : null}
 
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <Card className="rounded-[1.8rem] border-white/10 bg-[#141419] text-white shadow-[0_25px_60px_rgba(0,0,0,0.35)]">
@@ -267,7 +221,19 @@ export default function PatientHome() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-[1.6rem] border border-dashed border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-8 text-center transition-colors hover:border-[#ff8b49]/50">
+              <div
+                className={`rounded-[1.6rem] border border-dashed p-8 text-center transition-colors ${
+                  dragActive
+                    ? "border-[#ff8b49]/70 bg-[#ff8b49]/10"
+                    : "border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-[#ff8b49]/50"
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragActive(true);
+                }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={handleDrop}
+              >
                 <input
                   type="file"
                   id="lab-upload"
@@ -280,7 +246,7 @@ export default function PatientHome() {
                     <Upload className="h-7 w-7 text-white" />
                   </div>
                   <p className="mb-2 text-sm text-white/72">
-                    {selectedFile ? selectedFile.name : "Click to choose a file"}
+                    {selectedFile ? selectedFile.name : "Drag and drop or click to choose a file"}
                   </p>
                   <p className="text-xs text-white/45">PDF, PNG, or JPG up to 10MB</p>
                 </label>
@@ -403,6 +369,66 @@ export default function PatientHome() {
                 </CardContent>
               </Card>
             )}
+          </div>
+        ) : null}
+
+        {latestPanel ? (
+          <div className="space-y-6">
+            <BiomarkerInsightsBoard
+              metrics={allMetrics}
+              focusedMetricKeys={focusedMetricKeys}
+              onHoverMetric={(key) => setFocusedMetricKeys(key ? [key] : [])}
+            />
+
+            <OverviewStatCards
+              stats={[
+                {
+                  label: "Tracked Biomarkers",
+                  value: Object.keys(latestPanel.biomarkers ?? {}).length,
+                  detail: "Live markers extracted from your latest uploaded report.",
+                  tone: "teal",
+                },
+                {
+                  label: "Outside Range",
+                  value: allMetrics.filter((metric) => metric.status === "high" || metric.status === "low").length,
+                  detail: "Markers that need the fastest follow-up.",
+                  tone: "rose",
+                },
+                {
+                  label: "Borderline",
+                  value: allMetrics.filter((metric) => metric.status === "borderline").length,
+                  detail: "Markers worth tracking before they drift further.",
+                  tone: "amber",
+                },
+                {
+                  label: "Uploaded Reports",
+                  value: uploads.length,
+                  detail: "Files currently powering your patient portal.",
+                  tone: "blue",
+                },
+              ]}
+            />
+
+            <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+              <MetricPriorityBars
+                metrics={allMetrics}
+                title="Highest-priority markers"
+                description="The dashboard ranks urgent markers first so follow-up is easier to scan."
+                limit={10}
+              />
+              <MetricStatusDonut
+                metrics={allMetrics}
+                title="Biomarker status mix"
+                description="A quick read on how the latest panel is distributed across normal, borderline, and outside-range markers."
+              />
+            </div>
+
+            <MetricSparklineGrid
+              panels={panels}
+              metricKeys={topMetrics.slice(0, 6).map((metric) => metric.key)}
+              title="Recent marker movement"
+              description="Small trend cards make repeat panels easier to compare at a glance."
+            />
           </div>
         ) : null}
       </div>
