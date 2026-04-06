@@ -118,6 +118,8 @@ export default function Vitals() {
     }
 
     if (latestPanel) {
+      const derivedStatus: PatientVitalsRow["health_status"] =
+        labStatus?.tone === "normal" ? "normal" : "elevated";
       return {
         source: "lab" as const,
         bloodPressure: null as string | null,
@@ -127,7 +129,7 @@ export default function Vitals() {
         riskFlags: [] as string[],
         lastUpdated: formatLabDate(latestPanel.recorded_at),
         condition: "Latest uploaded lab panel",
-        status: labStatus?.tone === "normal" ? "normal" : "elevated",
+        status: derivedStatus,
         statusLabel: labStatus?.label ?? "Lab-derived",
       };
     }

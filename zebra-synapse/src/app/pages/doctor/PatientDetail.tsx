@@ -16,6 +16,7 @@ import {
 } from "../../components/ui/dialog";
 import {
   ArrowLeft,
+  AlertTriangle,
   Heart,
   Activity,
   TrendingUp,
@@ -24,8 +25,9 @@ import {
   Calendar,
   Upload,
   Send,
+  ShieldCheck,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../../auth/AuthContext";
 import {
   CARE_RELATIONSHIPS_LIST_SELECT,
@@ -50,6 +52,14 @@ import {
   type PrescriptionRow,
 } from "../../../lib/prescriptions";
 import { toast } from "sonner";
+import { LAB_PANEL_SELECT, formatLabDate, type LabPanelRow } from "../../../lib/labPanels";
+import {
+  getDiseasePredictions,
+  getLatestLabPanel,
+  getMetricAssessments,
+  getOverallStatus,
+  getWellnessTips,
+} from "../../../lib/labInsights";
 import {
   portalDialogClass,
   portalInputClass,
@@ -62,6 +72,19 @@ type PatientLabUploadRow = {
   id: string;
   original_filename: string;
   created_at: string;
+};
+
+type VitalsHistoryEntry = {
+  id: string;
+  source: "care" | "lab";
+  label: string;
+  recordedAt: string;
+  recordedAtLabel: string;
+  heartRate: number | null;
+  bloodPressure: string | null;
+  glucose: number | null;
+  a1c: number | null;
+  note: string;
 };
 
 type QuickActionKind =
@@ -178,6 +201,8 @@ export default function PatientDetail() {
   const [prescSaving, setPrescSaving] = useState(false);
   const [labUploads, setLabUploads] = useState<PatientLabUploadRow[]>([]);
   const [labLoading, setLabLoading] = useState(false);
+  const [labPanels, setLabPanels] = useState<LabPanelRow[]>([]);
+  const [labPanelsLoading, setLabPanelsLoading] = useState(false);
   const [careActions, setCareActions] = useState<CareActionRow[]>([]);
   const [careActionsLoading, setCareActionsLoading] = useState(false);
   const [careActionSaving, setCareActionSaving] = useState(false);
@@ -275,6 +300,31 @@ export default function PatientDetail() {
     if (rel) void loadLabUploads();
   }, [rel, loadLabUploads]);
 
+  const loadLabPanels = useCallback(async () => {
+    if (!patientId || !rel) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    setLabPanelsLoading(true);
+    const { data, error } = await sb
+      .from("lab_panels")
+      .select(LAB_PANEL_SELECT)
+      .eq("patient_id", patientId)
+      .order("recorded_at", { ascending: false })
+      .order("created_at", { ascending: false });
+    setLabPanelsLoading(false);
+    if (error) {
+      console.error("[lab_panels]", error.message);
+      toast.error("Could not load structured lab panels");
+      setLabPanels([]);
+      return;
+    }
+    setLabPanels(((data ?? []) as unknown) as LabPanelRow[]);
+  }, [patientId, rel]);
+
+  useEffect(() => {
+    if (rel) void loadLabPanels();
+  }, [rel, loadLabPanels]);
+
   const loadCareActions = useCallback(async () => {
     if (!patientId) return;
     const sb = getSupabase();
@@ -370,6 +420,79 @@ export default function PatientDetail() {
     ),
     glucose: rel?.glucose,
   };
+  const latestLabPanel = useMemo(() => getLatestLabPanel(labPanels), [labPanels]);
+  const latestLabMetrics = useMemo(
+    () =>
+      latestLabPanel
+        ? getMetricAssessments(latestLabPanel).filter((metric) => metric.status !== "missing")
+        : [],
+    [latestLabPanel],
+  );
+  const flaggedLabMetrics = useMemo(
+    () =>
+      latestLabMetrics
+        .filter((metric) => metric.status === "high" || metric.status === "low" || metric.status === "borderline")
+        .slice(0, 6),
+    [latestLabMetrics],
+  );
+  const diseasePredictions = useMemo(
+    () => (latestLabPanel ? getDiseasePredictions(latestLabPanel) : []),
+    [latestLabPanel],
+  );
+  const wellnessTips = useMemo(
+    () => (latestLabPanel ? getWellnessTips(latestLabPanel).slice(0, 3) : []),
+    [latestLabPanel],
+  );
+  const overallLabStatus = useMemo(
+    () => (latestLabPanel ? getOverallStatus(latestLabPanel) : null),
+    [latestLabPanel],
+  );
+  const vitalsHistory = useMemo<VitalsHistoryEntry[]>(() => {
+    const entries: VitalsHistoryEntry[] = [];
+
+    if (
+      rel &&
+      (
+        rel.heart_rate != null ||
+        rel.blood_pressure_systolic != null ||
+        rel.blood_pressure_diastolic != null ||
+        rel.glucose != null
+      )
+    ) {
+      const recordedAt = rel.last_visit ?? rel.created_at;
+      entries.push({
+        id: `care-${rel.patient_id}`,
+        source: "care",
+        label: "Linked care snapshot",
+        recordedAt,
+        recordedAtLabel: formatDisplayDate(recordedAt),
+        heartRate: rel.heart_rate,
+        bloodPressure: formatBloodPressure(rel.blood_pressure_systolic, rel.blood_pressure_diastolic),
+        glucose: rel.glucose,
+        a1c: null,
+        note: rel.primary_condition?.trim() || "Latest vitals from the doctor-patient relationship.",
+      });
+    }
+
+    for (const panel of labPanels) {
+      entries.push({
+        id: `lab-${panel.id}`,
+        source: "lab",
+        label: "Structured lab panel",
+        recordedAt: panel.recorded_at,
+        recordedAtLabel: formatLabDate(panel.recorded_at),
+        heartRate: null,
+        bloodPressure: null,
+        glucose: panel.fasting_glucose,
+        a1c: panel.hemoglobin_a1c,
+        note: panel.notes?.trim() || `${Object.keys(panel.biomarkers ?? {}).length} biomarkers extracted from uploaded lab data.`,
+      });
+    }
+
+    return entries.sort(
+      (left, right) => new Date(right.recordedAt).getTime() - new Date(left.recordedAt).getTime(),
+    );
+  }, [labPanels, rel]);
 
   const initials = (name: string) => {
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -796,19 +919,109 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="vitals">
-          <Card className={portalPanelClass}>
-            <CardHeader>
-              <CardTitle>Vital trends</CardTitle>
-              <CardDescription>Wearable or serial vitals (not demo data)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-white/60">
-                No time-series vitals are stored for this patient yet. The summary cards above show
-                the latest values from your care relationship when provided. Charts will appear
-                when device or clinic data is integrated.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card className={portalPanelClass}>
+                <CardContent className="p-4">
+                  <p className="text-sm text-white/40">History entries</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{vitalsHistory.length}</p>
+                  <p className="mt-1 text-sm text-white/60">Care snapshots and structured lab panels</p>
+                </CardContent>
+              </Card>
+              <Card className={portalPanelClass}>
+                <CardContent className="p-4">
+                  <p className="text-sm text-white/40">Latest glucose</p>
+                  <p className="mt-2 text-2xl font-bold text-white">
+                    {latestLabPanel?.fasting_glucose != null
+                      ? `${latestLabPanel.fasting_glucose} mg/dL`
+                      : vitalsSummary.glucose != null
+                        ? `${vitalsSummary.glucose} mg/dL`
+                        : "-"}
+                  </p>
+                  <p className="mt-1 text-sm text-white/60">
+                    {latestLabPanel ? `From lab panel on ${formatLabDate(latestLabPanel.recorded_at)}` : "From linked care record"}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className={portalPanelClass}>
+                <CardContent className="p-4">
+                  <p className="text-sm text-white/40">Latest A1c</p>
+                  <p className="mt-2 text-2xl font-bold text-white">
+                    {latestLabPanel?.hemoglobin_a1c != null ? `${latestLabPanel.hemoglobin_a1c}%` : "-"}
+                  </p>
+                  <p className="mt-1 text-sm text-white/60">Available from structured lab extraction only</p>
+                </CardContent>
+              </Card>
+              <Card className={portalPanelClass}>
+                <CardContent className="p-4">
+                  <p className="text-sm text-white/40">Lab status</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{overallLabStatus?.label ?? "Awaiting labs"}</p>
+                  <p className="mt-1 text-sm text-white/60">
+                    {overallLabStatus?.summary ?? "Upload and extract a panel to unlock richer longitudinal analysis."}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className={portalPanelClass}>
+              <CardHeader>
+                <CardTitle>Vitals and biomarker history</CardTitle>
+                <CardDescription>Linked care readings plus structured lab-derived glucose and A1c</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {labPanelsLoading ? (
+                  <p className="text-sm text-white/60">Loading history...</p>
+                ) : vitalsHistory.length === 0 ? (
+                  <p className="text-sm text-white/60">
+                    No serial vitals or structured lab panels are recorded for this patient yet.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {vitalsHistory.map((entry) => (
+                      <div key={entry.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-white">{entry.label}</p>
+                              <Badge className="border border-white/10 bg-white/[0.08] text-white/75">
+                                {entry.source === "care" ? "Care record" : "Lab panel"}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 text-sm text-white/50">{entry.recordedAtLabel}</p>
+                            <p className="mt-2 text-sm text-white/70">{entry.note}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-white/35">Heart Rate</p>
+                              <p className="mt-2 text-sm font-semibold text-white">
+                                {entry.heartRate != null ? `${entry.heartRate} bpm` : "—"}
+                              </p>
+                            </div>
+                            <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-white/35">Blood Pressure</p>
+                              <p className="mt-2 text-sm font-semibold text-white">{entry.bloodPressure ?? "—"}</p>
+                            </div>
+                            <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-white/35">Glucose</p>
+                              <p className="mt-2 text-sm font-semibold text-white">
+                                {entry.glucose != null ? `${entry.glucose} mg/dL` : "—"}
+                              </p>
+                            </div>
+                            <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-white/35">A1c</p>
+                              <p className="mt-2 text-sm font-semibold text-white">
+                                {entry.a1c != null ? `${entry.a1c}%` : "—"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="labs">
@@ -945,18 +1158,142 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="ai-insights">
-          <Card className={portalPanelClass}>
-            <CardHeader>
-              <CardTitle>AI insights</CardTitle>
-              <CardDescription>Grounded in patient data only</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-white/60">
-                Demo risk cards are removed. Insights will appear here when models run on structured
-                lab extractions and verified vitals-not placeholder diabetes or adherence narratives.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card className={portalPanelClass}>
+              <CardHeader>
+                <CardTitle>AI insights</CardTitle>
+                <CardDescription>Rule-based summaries grounded in uploaded labs and linked care data</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {latestLabPanel ? (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-[#FFC857]" />
+                        <p className="text-sm text-white/45">Latest panel</p>
+                      </div>
+                      <p className="mt-3 text-xl font-semibold text-white">
+                        {formatLabDate(latestLabPanel.recorded_at)}
+                      </p>
+                      <p className="mt-2 text-sm text-white/60">
+                        {latestLabMetrics.length} structured biomarkers available for analysis.
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-[#ff9c61]" />
+                        <p className="text-sm text-white/45">Flagged markers</p>
+                      </div>
+                      <p className="mt-3 text-xl font-semibold text-white">{flaggedLabMetrics.length}</p>
+                      <p className="mt-2 text-sm text-white/60">
+                        Borderline or abnormal markers in the most recent structured panel.
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-[#6C5BD4]" />
+                        <p className="text-sm text-white/45">Overall read</p>
+                      </div>
+                      <p className="mt-3 text-xl font-semibold text-white">{overallLabStatus?.label ?? "Stable"}</p>
+                      <p className="mt-2 text-sm text-white/60">
+                        {overallLabStatus?.summary ?? "Latest lab values are currently within configured ranges."}
+                      </p>
+                    </div>
+                  </div>
+                ) : rel?.risk_flags?.length ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-sm text-white/70">
+                      Structured lab panels are not available yet, but linked care risk flags are already present for this patient.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {rel.risk_flags.map((flag) => (
+                        <Badge key={flag} className="border border-white/10 bg-white/[0.08] text-white/80">
+                          {flag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-white/60">
+                    No structured lab panel is available yet for this patient, so AI insights cannot generate a grounded risk summary.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {latestLabPanel ? (
+              <>
+                <div className="grid gap-6 xl:grid-cols-2">
+                  <Card className={portalPanelClass}>
+                    <CardHeader>
+                      <CardTitle>Risk signals</CardTitle>
+                      <CardDescription>Generated from the latest structured biomarkers</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {diseasePredictions.map((prediction) => (
+                        <div key={prediction.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-semibold text-white">{prediction.title}</p>
+                            <Badge
+                              className={
+                                prediction.level === "high"
+                                  ? "border border-red-500/20 bg-red-500/20 text-red-300"
+                                  : prediction.level === "moderate"
+                                    ? "border border-yellow-500/20 bg-yellow-500/20 text-yellow-300"
+                                    : "border border-green-500/20 bg-green-500/20 text-green-300"
+                              }
+                            >
+                              {prediction.level.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <p className="mt-3 text-sm text-white/70">{prediction.rationale}</p>
+                          <p className="mt-2 text-sm text-white/55">{prediction.nextStep}</p>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  <Card className={portalPanelClass}>
+                    <CardHeader>
+                      <CardTitle>Top biomarker findings</CardTitle>
+                      <CardDescription>Most relevant markers from the current lab panel</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {(flaggedLabMetrics.length > 0 ? flaggedLabMetrics : latestLabMetrics.slice(0, 6)).map((metric) => (
+                        <div key={metric.key} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-semibold text-white">{metric.label}</p>
+                            <Badge className="border border-white/10 bg-white/[0.08] text-white/75">
+                              {metric.status.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <p className="mt-2 text-sm text-white/70">
+                            {metric.value != null ? `${metric.value} ${metric.unit}`.trim() : "Not provided"} • Reference {metric.range}
+                          </p>
+                          <p className="mt-2 text-sm text-white/55">{metric.summary}</p>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className={portalPanelClass}>
+                  <CardHeader>
+                    <CardTitle>Suggested follow-up themes</CardTitle>
+                    <CardDescription>Supportive prompts derived from the same patient-specific biomarkers</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-3 md:grid-cols-3">
+                    {wellnessTips.map((tip) => (
+                      <div key={tip.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                        <p className="font-semibold text-white">{tip.title}</p>
+                        <p className="mt-2 text-sm text-white/65">{tip.detail}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </>
+            ) : null}
+          </div>
         </TabsContent>
 
         <TabsContent value="actions">
@@ -1115,7 +1452,6 @@ export default function PatientDetail() {
     </Dialog>
   );
 }
-
 
 
 
