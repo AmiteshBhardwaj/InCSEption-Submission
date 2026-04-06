@@ -33,7 +33,7 @@ See [demo.md](./demo.md) for demo flow, setup, and what judges should inspect. A
 ## Pre-Submission Checklist
 
 - [x] Code is organized inside this submission package
-- [x] Dependencies are documented in [`requirements.txt`](./requirements.txt)
+- [x] Dependencies are documented in [`tooling-requirements.md`](./tooling-requirements.md)
 - [x] Environment variables are documented in [`.env.example`](./.env.example)
 - [x] Screenshots folder is included in [`screenshots/`](./screenshots)
 - [x] Local run instructions are included below
@@ -81,6 +81,6 @@ If `VITE_SITE_URL` or the Supabase redirect URLs do not match the deployed domai
 - `src/`: application source
 - `supabase/`: schema and migration history
 - `package.json`: project scripts and dependencies
-- `requirements.txt`: runtime and tooling requirements summary
+- `tooling-requirements.md`: runtime and tooling requirements summary
 - `architecture.md`: system design summary
 - `demo.md`: demo guide for judges

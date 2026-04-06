@@ -17,7 +17,7 @@ That folder includes:
 
 - `.github/`: CI workflow configuration
 - `zebra-synapse/`: final submission package
-- `requirements.txt`: environment prerequisites summary
+- `tooling-requirements.md`: environment prerequisites summary
 
 ## Start Here
 

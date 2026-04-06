@@ -8,6 +8,8 @@ zebra-synapse/.env
 zebra-synapse/.env.local
 zebra-synapse/.env.production
 zebra-synapse/.env.*.local
+.vercel/
+zebra-synapse/.vercel/
 .DS_Store
 Thumbs.db
 .codex-*
