@@ -116,7 +116,7 @@ export default function PatientsList() {
 
   return (
     <div className="min-h-full bg-transparent p-8 text-white">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl text-white">My Patients</h1>
           <p className="mt-1 text-white/60">
@@ -126,7 +126,7 @@ export default function PatientsList() {
         <LinkPatientDialog onLinked={() => void load()} />
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.05] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/40" />
           <Input
@@ -171,7 +171,7 @@ export default function PatientsList() {
             return (
               <Card
                 key={patient.patientId}
-                className={`${portalPanelClass} ${statusConfig.cardBorder} cursor-pointer transition-all duration-300`}
+                className={`${portalPanelClass} ${statusConfig.cardBorder} cursor-pointer bg-white/[0.05] shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition hover:scale-[1.01] hover:border-white/[0.16] hover:shadow-[0_12px_38px_rgba(0,0,0,0.46)]`}
                 onClick={() => navigate(`/doctor/patient/${patient.patientId}`)}
               >
                 <CardContent className="p-6">
@@ -285,7 +285,7 @@ export default function PatientsList() {
       ) : null}
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className={portalPanelClass}>
+        <Card className={`${portalPanelClass} bg-white/[0.05] shadow-[0_8px_32px_rgba(0,0,0,0.4)]`}>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-green-500/20 bg-green-500/12">
@@ -298,7 +298,7 @@ export default function PatientsList() {
             </div>
           </CardContent>
         </Card>
-        <Card className={portalPanelClass}>
+        <Card className={`${portalPanelClass} bg-white/[0.05] shadow-[0_8px_32px_rgba(0,0,0,0.4)]`}>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-yellow-500/20 bg-yellow-500/12">
@@ -311,7 +311,7 @@ export default function PatientsList() {
             </div>
           </CardContent>
         </Card>
-        <Card className={portalPanelClass}>
+        <Card className={`${portalPanelClass} bg-white/[0.05] shadow-[0_8px_32px_rgba(0,0,0,0.4)]`}>
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/12">

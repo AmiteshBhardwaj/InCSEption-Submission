@@ -3,7 +3,6 @@ import { useAuth } from "../../../auth/AuthContext";
 import { Button } from "../../components/ui/button";
 import { Activity, Users, LogOut, Stethoscope, Settings } from "lucide-react";
 import {
-  portalPrimaryButtonClass,
   portalSecondaryButtonClass,
 } from "../../components/patient/PortalTheme";
 
@@ -18,8 +17,8 @@ export default function DoctorDashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-[radial-gradient(circle_at_20%_20%,_rgba(108,91,212,0.18),_transparent_22%),radial-gradient(circle_at_top_right,_rgba(255,106,0,0.14),_transparent_24%),linear-gradient(180deg,#121212_0%,#0a0a0f_100%)] text-white">
-      <aside className="flex w-64 flex-col border-r border-white/10 bg-[#0d0d12]">
+    <div className="flex h-screen bg-[radial-gradient(circle_at_10%_20%,_rgba(26,26,46,0.96),_rgba(10,10,15,0.98)_60%),radial-gradient(circle_at_top_right,_rgba(255,106,0,0.14),_transparent_26%),radial-gradient(circle_at_top_left,_rgba(108,91,212,0.16),_transparent_28%)] text-white">
+      <aside className="flex w-64 flex-col border-r border-white/10 bg-[#0b0b10]">
         <div className="border-b border-white/10 p-6">
           <div className="flex items-center gap-2">
             <Activity className="w-6 h-6 text-[#ff9c61]" strokeWidth={1.5} />
@@ -31,7 +30,7 @@ export default function DoctorDashboard() {
         </div>
 
         <div className="border-b border-white/10 p-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
               <Stethoscope className="w-5 h-5 text-[#ff9c61]" strokeWidth={1.5} />
             </div>
@@ -53,7 +52,7 @@ export default function DoctorDashboard() {
               className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
                 location.pathname === "/doctor"
                   ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/20"
-                  : "text-white/60 hover:bg-white/[0.06] hover:text-white"
+                  : "text-white/60 hover:bg-white/[0.08] hover:text-white"
               }`}
             >
               <Users className="w-4 h-4" strokeWidth={1.5} />
@@ -64,7 +63,7 @@ export default function DoctorDashboard() {
               className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
                 location.pathname === "/doctor/settings"
                   ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/20"
-                  : "text-white/60 hover:bg-white/[0.06] hover:text-white"
+                  : "text-white/60 hover:bg-white/[0.08] hover:text-white"
               }`}
             >
               <Settings className="w-4 h-4" strokeWidth={1.5} />

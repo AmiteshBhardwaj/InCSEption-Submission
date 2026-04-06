@@ -20,7 +20,6 @@ import {
   portalInputClass,
   portalPrimaryButtonClass,
   portalSecondaryButtonClass,
-  portalSelectContentClass,
   portalSelectItemClass,
   portalSelectTriggerClass,
 } from "../../components/patient/PortalTheme";
@@ -123,7 +122,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" className={portalPrimaryButtonClass}>
+        <Button type="button" className={`rounded-xl shadow-lg shadow-orange-500/30 hover:opacity-90 ${portalPrimaryButtonClass}`}>
           <UserPlus className="w-4 h-4 mr-2" />
           Link patient
         </Button>
@@ -222,7 +221,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
               <Label htmlFor="link_status" className="text-white">Health status</Label>
               <select
                 id="link_status"
-                className={`${portalSelectTriggerClass} flex h-11 w-full rounded-xl border px-3 py-1 text-sm shadow-none focus-visible:outline-none`}
+                className={`${portalSelectTriggerClass} flex h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-sm text-white shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl focus-visible:outline-none`}
                 value={healthStatus}
                 onChange={(e) =>
                   setHealthStatus(e.target.value as "normal" | "elevated" | "risk")
