@@ -2,5 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd zebra-synapse && npm ci",
   "buildCommand": "cd zebra-synapse && npm run build",
-  "outputDirectory": "zebra-synapse/dist"
+  "outputDirectory": "zebra-synapse/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
