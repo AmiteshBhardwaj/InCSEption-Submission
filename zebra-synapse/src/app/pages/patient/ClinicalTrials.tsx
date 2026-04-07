@@ -11,10 +11,14 @@ import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRe
 import {
   PatientPageHero,
   PatientPortalPage,
+  StatusPill,
   portalInsetClass,
   portalPanelClass,
+  portalPrimaryButtonClass,
+  portalSecondaryButtonClass,
 } from "../../components/patient/PortalTheme";
 import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 
 type PatientTrialsFallbackRow = {
@@ -102,6 +106,7 @@ export default function ClinicalTrials() {
     };
   }, [careRow, latestPanel, user?.id]);
   const trialMatches = derivedPanel ? getTrialMatches(derivedPanel) : [];
+  const matchedStudyCount = trialMatches.reduce((total, trial) => total + trial.studies.length, 0);
   const hasTrialSource = Boolean(derivedPanel);
   const sourceLabel = latestPanel ? "Structured lab panel" : "Linked care data";
   const recordedLabel = derivedPanel
@@ -224,10 +229,10 @@ export default function ClinicalTrials() {
       <PatientPageHero
         eyebrow="Research Matching"
         title="Clinical Trials"
-        description="Trial search themes generated from your latest real biomarker and linked care signals."
+        description="Condition-linked studies are inferred from your latest patient-specific signals so you can open concrete ClinicalTrials.gov records instead of copying raw search prompts."
         icon={FlaskConical}
         meta={[
-          { label: "Matched studies", value: trialMatches.length },
+          { label: "Matched studies", value: matchedStudyCount },
           { label: "Eligibility engine", value: sourceLabel },
           { label: "Recorded", value: recordedLabel },
           { label: "Search scope", value: "Patient-specific only" },
@@ -248,7 +253,7 @@ export default function ClinicalTrials() {
         </section>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">
           {trialMatches.map((trial) => (
             <Card key={trial.title} className={portalPanelClass}>
@@ -256,37 +261,54 @@ export default function ClinicalTrials() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <CardTitle className="text-white">{trial.title}</CardTitle>
-                    <CardDescription className="mt-2 text-white/60">{trial.summary}</CardDescription>
+                    <CardDescription className="mt-2 text-[#A1A1AA]">{trial.summary}</CardDescription>
                   </div>
-                  {careRow ? (
-                    <Badge className={statusBadgeClass(careRow.health_status)}>{careRow.health_status}</Badge>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    {careRow ? (
+                      <Badge className={statusBadgeClass(careRow.health_status)}>{careRow.health_status}</Badge>
+                    ) : null}
+                    <Button asChild variant="outline" className={portalSecondaryButtonClass}>
+                      <a href={trial.searchUrl} target="_blank" rel="noopener noreferrer">
+                        Search
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Suggested search query</p>
-                  <p className="mt-2 text-sm font-medium text-white">{trial.query}</p>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Search terms</p>
+                  <p className="mt-2 text-sm font-medium text-[#ffb07a]">{trial.query}</p>
                 </div>
-                <div className={`${portalInsetClass} p-4`}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">How to use it</p>
-                      <p className="mt-2 text-sm leading-7 text-white/80">
-                        Use this category with your care team to review current eligibility, exclusions, and study location.
-                      </p>
-                    </div>
-                    <a
-                      href={`https://clinicaltrials.gov/search?term=${encodeURIComponent(trial.query)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/80 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-                    >
-                      Search
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
+                {trial.studies.length > 0 ? (
+                  <div className="space-y-3">
+                    {trial.studies.map((study) => (
+                      <div key={study.nctId} className={`${portalInsetClass} p-4`}>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">{study.nctId}</p>
+                            <h3 className="mt-2 text-sm font-semibold leading-6 text-white">{study.title}</h3>
+                          </div>
+                          <StatusPill status={study.status} />
+                        </div>
+                        <p className="mt-3 text-sm leading-6 text-[#D4D4D8]">{study.fitNote}</p>
+                        <Button asChild className={`${portalPrimaryButtonClass} mt-4`}>
+                          <a href={study.href} target="_blank" rel="noopener noreferrer">
+                            Open study
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                ) : (
+                  <div className={`${portalInsetClass} p-4`}>
+                    <p className="text-sm leading-6 text-[#D4D4D8]">
+                      No specific record is pinned for this category yet. Use the search link to review current listings with your clinician.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -296,11 +318,16 @@ export default function ClinicalTrials() {
           <Card className={portalPanelClass}>
             <CardHeader>
               <CardTitle className="text-white">Match context</CardTitle>
-              <CardDescription className="text-white/60">
+              <CardDescription className="text-[#A1A1AA]">
                 These categories are derived from your most recent structured health signals.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className={`${portalInsetClass} p-4`}>
+                <p className="text-sm leading-7 text-[#D4D4D8]">
+                  These links point directly to specific ClinicalTrials.gov study records, but they are still not enrollment recommendations.
+                </p>
+              </div>
               <div className={`${portalInsetClass} p-4`}>
                 <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Source</p>
                 <p className="mt-2 text-sm font-medium text-white">{sourceLabel}</p>
@@ -310,30 +337,35 @@ export default function ClinicalTrials() {
                 <p className="mt-2 text-sm font-medium text-white">{recordedLabel}</p>
               </div>
               <div className={`${portalInsetClass} p-4`}>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Matching posture</p>
-                <p className="mt-2 text-sm font-medium text-white">
-                  Search themes only. Formal eligibility still depends on study criteria and clinician review.
+                <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Why these matches</p>
+                <p className="mt-2 text-sm leading-7 text-white/80">
+                  Matches are inferred from glucose, lipid, kidney, anemia, and related markers in your latest patient-linked data.
                 </p>
               </div>
+              <Button asChild variant="outline" className={portalSecondaryButtonClass}>
+                <a href="https://clinicaltrials.gov" target="_blank" rel="noopener noreferrer">
+                  Browse ClinicalTrials.gov
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
             </CardContent>
           </Card>
 
           <Card className={portalPanelClass}>
             <CardHeader>
-              <CardTitle className="text-white">Search tags</CardTitle>
-              <CardDescription className="text-white/60">
-                Quick labels for the trial categories detected from your latest data.
+              <CardTitle className="text-white">Matching signals</CardTitle>
+              <CardDescription className="text-[#A1A1AA]">
+                Quick view of the categories currently contributing to study links.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
+            <CardContent className="space-y-3">
               {trialMatches.map((trial) => (
-                <Badge
-                  key={trial.title}
-                  variant="outline"
-                  className="border-white/10 bg-white/[0.04] px-3 py-1 text-white/80"
-                >
-                  {trial.title}
-                </Badge>
+                <div key={trial.title} className={`${portalInsetClass} p-4`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-white">{trial.title}</p>
+                    <p className="text-sm text-[#ffb07a]">{trial.studies.length} linked</p>
+                  </div>
+                </div>
               ))}
             </CardContent>
           </Card>

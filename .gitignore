@@ -12,6 +12,10 @@ zebra-synapse/.env.*.local
 zebra-synapse/.vercel/
 .DS_Store
 Thumbs.db
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
 .codex-*
 guidelines/
 hackathon-2026/**/node_modules/

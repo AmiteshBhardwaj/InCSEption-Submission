@@ -76,6 +76,15 @@ If you set `VITE_SITE_URL`, it must match an allowed Supabase redirect origin ex
 - `npm run build`
 - `npm run typecheck`
 
+## Security Baseline
+
+- Apply [`supabase/migrations/009_security_hardening.sql`](./supabase/migrations/009_security_hardening.sql) and [`supabase/migrations/010_security_invariants.sql`](./supabase/migrations/010_security_invariants.sql) after the existing migrations. Together they add forced RLS on PHI tables, immutable ownership controls, relationship validation, upload path validation, and an audit log for sensitive writes.
+- Deploy with the repository `vercel.json` headers intact. They add a restrictive CSP, disable framing, tighten referrer leakage, and enforce HSTS.
+- Set Supabase Auth rate limits, bot protection/CAPTCHA, leaked-password protection, and MFA policies in the Supabase dashboard. Those controls are not expressible purely in this repo and should be treated as required production settings.
+- Keep the Supabase service role key out of the frontend entirely. Only `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` belong in browser-exposed env vars.
+- If you need longer-lived browser sessions, set `VITE_AUTH_INACTIVITY_TIMEOUT_MS`; otherwise the app now expires inactive sessions after 15 minutes by default.
+- Review the repository security workflow and CodeQL alerts in `.github/workflows/security.yml` before merging production changes.
+
 ## Key Files
 
 - `src/`: application source

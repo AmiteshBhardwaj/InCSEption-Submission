@@ -41,5 +41,10 @@ Required environment variables for the deployed frontend:
 Optional environment variable:
 
 - `VITE_SITE_URL`
+- `VITE_AUTH_INACTIVITY_TIMEOUT_MS`
 
 If `VITE_SITE_URL` is omitted, the app uses the browser origin for auth redirects.
+
+## Security Baseline
+
+Apply [`zebra-synapse/supabase/migrations/009_security_hardening.sql`](./zebra-synapse/supabase/migrations/009_security_hardening.sql) and [`zebra-synapse/supabase/migrations/010_security_invariants.sql`](./zebra-synapse/supabase/migrations/010_security_invariants.sql) after the existing Supabase migrations. They add forced RLS, immutable ownership checks, relationship validation, upload path controls, and write audit logging. Keep the Vercel security headers in the checked-in `vercel.json` files, and enable Supabase Auth rate limits, bot protection, leaked-password detection, and MFA in the Supabase dashboard for production. Repository-level scanning is defined in [`.github/workflows/security.yml`](./.github/workflows/security.yml).

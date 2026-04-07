@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { getAuthRequestErrorMessage } from "../../../lib/authErrors";
 import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
+import { getPasswordPolicyError } from "../../../lib/security";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -23,6 +24,11 @@ export default function PatientSignup() {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match.");
+      return;
+    }
+    const passwordError = getPasswordPolicyError(formData.password);
+    if (passwordError) {
+      toast.error(passwordError);
       return;
     }
     if (!isSupabaseConfigured()) {
@@ -130,7 +136,7 @@ export default function PatientSignup() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                   autoComplete="new-password"
-                  minLength={6}
+                  minLength={12}
                 />
               </div>
               <div className="space-y-2">

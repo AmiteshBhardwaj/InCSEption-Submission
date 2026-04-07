@@ -36,6 +36,16 @@ export type TrialMatch = {
   title: string;
   summary: string;
   query: string;
+  searchUrl: string;
+  studies: TrialStudy[];
+};
+
+export type TrialStudy = {
+  nctId: string;
+  title: string;
+  href: string;
+  status: string;
+  fitNote: string;
 };
 
 function statusRank(status: MetricAssessment["status"]): number {
@@ -67,6 +77,10 @@ export function getLatestLabPanel(
 function formatValue(value: number | null, unit: string): string {
   if (value == null) return "Not provided";
   return `${value} ${unit}`.trim();
+}
+
+function buildClinicalTrialsSearchUrl(query: string): string {
+  return `https://clinicaltrials.gov/search?${new URLSearchParams({ term: query }).toString()}`;
 }
 
 function getPanelBiomarkerValue(panel: LabPanelRow, key: string): number | null {
@@ -404,6 +418,23 @@ export function getTrialMatches(panel: LabPanelRow): TrialMatch[] {
       title: "Prediabetes and diabetes prevention studies",
       summary: "Your glucose markers may align with screening terms used in metabolic prevention trials.",
       query: "prediabetes OR type 2 diabetes prevention",
+      searchUrl: buildClinicalTrialsSearchUrl("prediabetes OR type 2 diabetes prevention"),
+      studies: [
+        {
+          nctId: "NCT06387797",
+          title: "Primary and Secondary Prevention of Type 2 Diabetes Mellitus in Clark County",
+          href: "https://clinicaltrials.gov/study/NCT06387797",
+          status: "recruiting",
+          fitNote: "This record explicitly targets prediabetes and adults at risk for type 2 diabetes.",
+        },
+        {
+          nctId: "NCT03844646",
+          title: "Continuous Glucose Monitoring to Aid Weight Loss in Prediabetes",
+          href: "https://clinicaltrials.gov/study/NCT03844646",
+          status: "completed",
+          fitNote: "The inclusion criteria include fasting glucose 100-125 mg/dL or HbA1c 5.7-6.4%.",
+        },
+      ],
     });
   }
 
@@ -415,6 +446,23 @@ export function getTrialMatches(panel: LabPanelRow): TrialMatch[] {
       title: "Cholesterol and cardiometabolic studies",
       summary: "Lipid markers may fit search terms around dyslipidemia or cardiovascular prevention.",
       query: "dyslipidemia OR hyperlipidemia prevention",
+      searchUrl: buildClinicalTrialsSearchUrl("dyslipidemia OR hyperlipidemia prevention"),
+      studies: [
+        {
+          nctId: "NCT02719028",
+          title: "Trial of Antroquinonol in Patients With Hypercholesterolemia and Hyperlipidemia",
+          href: "https://clinicaltrials.gov/study/NCT02719028",
+          status: "completed",
+          fitNote: "This record screens adults with mixed hyperlipidemia, including LDL above 130 mg/dL or triglycerides 150-500 mg/dL.",
+        },
+        {
+          nctId: "NCT04148976",
+          title: "Effect of Dietary Intervention on LDL-C in Patients With Hypercholesterolemia",
+          href: "https://clinicaltrials.gov/study/NCT04148976",
+          status: "study listed",
+          fitNote: "This dietary intervention focused on adults with mild hypercholesterolemia and LDL above 130 mg/dL.",
+        },
+      ],
     });
   }
 
@@ -423,6 +471,23 @@ export function getTrialMatches(panel: LabPanelRow): TrialMatch[] {
       title: "Kidney monitoring studies",
       summary: "Renal follow-up trials often screen for reduced kidney reserve or chronic kidney disease risk.",
       query: "chronic kidney disease early monitoring",
+      searchUrl: buildClinicalTrialsSearchUrl("chronic kidney disease early monitoring"),
+      studies: [
+        {
+          nctId: "NCT07210710",
+          title: "CKD Awareness, Referrals, Education, and Support Intervention for Early-Stage CKD",
+          href: "https://clinicaltrials.gov/study/NCT07210710",
+          status: "study listed",
+          fitNote: "This study is centered on early-stage chronic kidney disease care and monitoring workflows.",
+        },
+        {
+          nctId: "NCT05914259",
+          title: "CKD Natural History Study",
+          href: "https://clinicaltrials.gov/study/NCT05914259",
+          status: "study listed",
+          fitNote: "This observational record tracks how chronic kidney disease changes over time in adults.",
+        },
+      ],
     });
   }
 
@@ -431,6 +496,23 @@ export function getTrialMatches(panel: LabPanelRow): TrialMatch[] {
       title: "Anemia and iron deficiency studies",
       summary: "Low hemoglobin can map to anemia-related screening categories.",
       query: "anemia OR iron deficiency",
+      searchUrl: buildClinicalTrialsSearchUrl("anemia OR iron deficiency"),
+      studies: [
+        {
+          nctId: "NCT06303531",
+          title: "Efficacious Iron for Iron Deficiency Anemia in Adults Aged 18 Years and Older",
+          href: "https://clinicaltrials.gov/study/NCT06303531",
+          status: "study listed",
+          fitNote: "This adult study directly targets iron deficiency anemia and tracks hemoglobin response.",
+        },
+        {
+          nctId: "NCT05185024",
+          title: "Daily Oral Iron Supplementation for Replenishment of Depleted Iron in Adults",
+          href: "https://clinicaltrials.gov/study/NCT05185024",
+          status: "study listed",
+          fitNote: "This record focused on adults with low hemoglobin and depleted iron stores.",
+        },
+      ],
     });
   }
 
@@ -439,6 +521,8 @@ export function getTrialMatches(panel: LabPanelRow): TrialMatch[] {
       title: "General preventive health studies",
       summary: "No strong lab-driven category was detected, so use broader prevention search terms.",
       query: "preventive health adults",
+      searchUrl: buildClinicalTrialsSearchUrl("preventive health adults"),
+      studies: [],
     });
   }
 
